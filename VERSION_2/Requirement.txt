@@ -1,0 +1,7 @@
+transformers
+datasets
+torchaudio
+torch
+soundfile
+jiwer
+flask

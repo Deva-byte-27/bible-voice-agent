@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>✝ Bible Display — Control</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700&family=Crimson+Pro:ital,wght@0,300;0,400;0,600&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --ink:     #07060a;
+      --surface: rgba(255,255,255,0.035);
+      --surface2:rgba(255,255,255,0.06);
+      --border:  rgba(201,168,76,0.18);
+      --border2: rgba(201,168,76,0.38);
+      --gold:    #c9a84c;
+      --gold2:   #e8cc80;
+      --gold3:   #f7e9b0;
+      --ivory:   #f0ead8;
+      --ivory2:  #c8bfa8;
+      --muted:   #6a6358;
+      --green:   #2ecc71;
+      --blue:    #5bc8ff;
+      --purple:  #c084fc;
+      --r: 12px;
+    }
+    *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+    body {
+      min-height:100vh; background:var(--ink); color:var(--ivory);
+      font-family:'Crimson Pro',Georgia,serif;
+      display:flex; flex-direction:column; align-items:center;
+      padding:0 1rem 6rem; overflow-x:hidden;
+    }
+    body::before {
+      content:''; position:fixed; inset:0; z-index:0; pointer-events:none; opacity:.5;
+      background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    }
+    body::after {
+      content:''; position:fixed; top:-20vh; left:50%; transform:translateX(-50%);
+      width:80vw; height:60vh; pointer-events:none; z-index:0;
+      background:radial-gradient(ellipse,rgba(201,168,76,.07) 0%,transparent 70%);
+    }
+
+    /* ── HEADER ── */
+    header {
+      position:relative; z-index:1; text-align:center;
+      padding:2.8rem 0 2rem; width:100%; max-width:580px;
+    }
+    .halo {
+      display:flex; align-items:center; justify-content:center;
+      gap:1rem; margin-bottom:1rem;
+    }
+    .halo .line { flex:1; height:1px; max-width:80px;
+      background:linear-gradient(90deg,transparent,var(--gold),transparent); }
+    .cross {
+      font-size:1.7rem;
+      background:linear-gradient(160deg,var(--gold3),var(--gold));
+      background-clip:text;-webkit-background-clip:text; -webkit-text-fill-color:transparent;
+      filter:drop-shadow(0 0 8px rgba(201,168,76,.4));
+      animation:halo 3s ease-in-out infinite;
+    }
+    @keyframes halo { 0%,100%{filter:drop-shadow(0 0 6px rgba(201,168,76,.3))} 50%{filter:drop-shadow(0 0 14px rgba(201,168,76,.7))} }
+    header h1 {
+      font-family:'Cormorant Garamond',serif; font-weight:300;
+      font-size:clamp(1.5rem,5vw,2.2rem); letter-spacing:.35em; text-transform:uppercase;
+      background:linear-gradient(135deg,var(--gold3),var(--gold),var(--gold2));
+      background-clip:text;-webkit-background-clip:text; -webkit-text-fill-color:transparent;
+    }
+    header p { font-size:.72rem; letter-spacing:.4em; text-transform:uppercase; color:var(--muted); margin-top:.3rem; }
+
+    /* ── CARD ── */
+    .card {
+      position:relative; z-index:1;
+      width:100%; max-width:580px; margin-bottom:.9rem;
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:var(--r); padding:1.4rem 1.6rem;
+      backdrop-filter:blur(12px);
+      box-shadow:0 1px 0 rgba(201,168,76,.1) inset,0 20px 40px rgba(0,0,0,.5);
+      transition:border-color .3s;
+      opacity:0; animation:rise .55s ease forwards;
+    }
+    .card:hover { border-color:var(--border2); }
+    .card:nth-child(2){animation-delay:.04s}.card:nth-child(3){animation-delay:.08s}
+    .card:nth-child(4){animation-delay:.12s}.card:nth-child(5){animation-delay:.16s}
+    .card:nth-child(6){animation-delay:.20s}.card:nth-child(7){animation-delay:.24s}
+    @keyframes rise { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:none} }
+
+    .card-label {
+      font-family:'Cormorant Garamond',serif;
+      font-size:.62rem; letter-spacing:.4em; text-transform:uppercase;
+      color:var(--gold); margin-bottom:1rem;
+      display:flex; align-items:center; gap:.8rem;
+    }
+    .card-label::after { content:''; flex:1; height:1px; background:linear-gradient(90deg,var(--border2),transparent); }
+
+    /* ── STATUS ── */
+    .status-grid { display:grid; grid-template-columns:auto 1fr; gap:.35rem .8rem; align-items:center; }
+    .pulse-ring { position:relative; width:12px; height:12px; grid-row:span 2; align-self:center; }
+    .pulse-ring .dot { width:10px;height:10px;border-radius:50%;background:var(--muted);position:absolute;top:1px;left:1px;transition:background .5s,box-shadow .5s; }
+    .pulse-ring .ring { position:absolute;inset:0;border-radius:50%;border:1px solid transparent;transition:border-color .5s; }
+    .pulse-ring.listening .dot  { background:var(--green);box-shadow:0 0 10px var(--green); }
+    .pulse-ring.listening .ring { border-color:var(--green);animation:ro 1.4s ease-out infinite; }
+    .pulse-ring.processing .dot { background:var(--gold);box-shadow:0 0 10px var(--gold); }
+    .pulse-ring.processing .ring{ border-color:var(--gold);animation:ro .8s ease-out infinite; }
+    @keyframes ro { 0%{transform:scale(1);opacity:.8} 100%{transform:scale(2.4);opacity:0} }
+    #status-text { font-family:'Cormorant Garamond',serif; font-size:1.1rem; font-weight:600; }
+    #raw-text    { font-style:italic; font-size:.83rem; color:var(--muted); line-height:1.4; grid-column:2; }
+
+    /* ══ DISPLAY MODE ══ */
+    .mode-grid {
+      display:grid; grid-template-columns:repeat(3,1fr); gap:.6rem;
+    }
+    .mode-btn {
+      display:flex; flex-direction:column; align-items:center;
+      gap:.35rem; padding:.8rem .5rem;
+      border-radius:10px; border:1px solid var(--border);
+      background:transparent; color:var(--muted);
+      cursor:pointer; transition:all .25s; font-family:'Crimson Pro',serif;
+    }
+    .mode-btn .mode-icon { font-size:1.3rem; }
+    .mode-btn .mode-name { font-size:.7rem; letter-spacing:.15em; text-transform:uppercase; }
+    .mode-btn .mode-sub  { font-size:.62rem; color:var(--muted); }
+    .mode-btn:hover { border-color:var(--border2); color:var(--ivory2); background:var(--surface2); }
+
+    .mode-btn.active-tamil   { border-color:rgba(46,204,113,.6); color:var(--green); background:rgba(46,204,113,.08); }
+    .mode-btn.active-english { border-color:rgba(91,200,255,.6); color:var(--blue);  background:rgba(91,200,255,.08); }
+    .mode-btn.active-both    { border-color:rgba(192,132,252,.6); color:var(--purple); background:rgba(192,132,252,.08); }
+
+    /* ══ ENGLISH VERSION SELECTOR ══ */
+    .version-grid {
+      display:grid; grid-template-columns:repeat(4,1fr); gap:.5rem;
+    }
+    .ver-btn {
+      display:flex; flex-direction:column; align-items:center;
+      gap:.2rem; padding:.65rem .3rem;
+      border-radius:8px; border:1px solid var(--border);
+      background:transparent; color:var(--muted);
+      cursor:pointer; transition:all .2s; font-family:'Crimson Pro',serif;
+    }
+    .ver-btn .ver-name { font-family:'Cormorant Garamond',serif; font-size:1rem; font-weight:600; letter-spacing:.05em; }
+    .ver-btn .ver-sub  { font-size:.58rem; letter-spacing:.05em; text-transform:uppercase; line-height:1.3; text-align:center; }
+    .ver-btn:hover { border-color:var(--border2); color:var(--ivory2); background:var(--surface2); }
+    .ver-btn.active { border-color:rgba(201,168,76,.6); color:var(--gold2); background:rgba(201,168,76,.1); box-shadow:0 0 12px rgba(201,168,76,.15); }
+    .ver-btn.disabled { opacity:.3; pointer-events:none; }
+
+    .version-note {
+      font-size:.73rem; font-style:italic; color:var(--muted);
+      margin-top:.7rem; text-align:center; line-height:1.5;
+    }
+
+    /* ══ MIC ══ */
+    .mic-section { display:flex; flex-direction:column; align-items:center; gap:1.3rem; }
+    .mic-wrap { position:relative; width:82px; height:82px; display:flex; align-items:center; justify-content:center; }
+    .gr  { position:absolute; inset:0;    border-radius:50%; border:1px solid rgba(201,168,76,.3); transition:all .4s; }
+    .gr2 { position:absolute; inset:-10px;border-radius:50%; border:1px solid rgba(201,168,76,.1); transition:all .4s; }
+    .mic-wrap:hover .gr  { border-color:rgba(201,168,76,.7); box-shadow:0 0 20px rgba(201,168,76,.25); }
+    #mic-btn {
+      width:70px; height:70px; border-radius:50%;
+      background:radial-gradient(circle at 35% 35%,#2a2418,#0f0d0a);
+      border:1px solid var(--gold);
+      box-shadow:0 0 0 1px rgba(201,168,76,.2),0 8px 32px rgba(0,0,0,.6),inset 0 1px 0 rgba(201,168,76,.3);
+      cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
+      transition:all .3s; position:relative; z-index:1;
+    }
+    #mic-btn .mic-icon  { font-size:1.35rem; }
+    #mic-btn .mic-label { font-family:'Cormorant Garamond',serif; font-size:.5rem; letter-spacing:.25em; text-transform:uppercase; color:var(--gold); }
+    #mic-btn.active { background:radial-gradient(circle at 35% 35%,#1e3a28,#0a1a10); border-color:var(--green); animation:candle 2s ease-in-out infinite; }
+    @keyframes candle {
+      0%,100%{box-shadow:0 0 0 1px rgba(46,204,113,.4),0 0 28px rgba(46,204,113,.18),0 8px 32px rgba(0,0,0,.6)}
+      40%{box-shadow:0 0 0 1px rgba(46,204,113,.65),0 0 48px rgba(46,204,113,.35),0 8px 32px rgba(0,0,0,.6)}
+    }
+    .session-row { display:flex; gap:.7rem; justify-content:center; }
+    .btn { font-family:'Crimson Pro',serif; font-size:.76rem; letter-spacing:.2em; text-transform:uppercase; padding:.5rem 1.2rem; border-radius:8px; border:1px solid; cursor:pointer; transition:all .2s; display:flex; align-items:center; gap:.4rem; }
+    .btn:disabled { opacity:.3; cursor:not-allowed; pointer-events:none; }
+    .btn-stop  { border-color:rgba(155,44,44,.5); color:#e1b35c; background:rgba(155,44,44,.1); }
+    .btn-stop:hover { background:rgba(155,44,44,.2); border-color:rgba(155,44,44,.8); }
+    .btn-ghost { border-color:var(--border); color:var(--muted); background:transparent; }
+    .btn-ghost:hover { border-color:var(--border2); color:var(--ivory2); }
+
+    /* ── MANUAL ── */
+    .input-row { display:flex; gap:.6rem; }
+    .ref-input { flex:1; background:rgba(0,0,0,.35); border:1px solid var(--border); border-radius:8px; color:var(--ivory); font-family:'Crimson Pro',serif; font-size:.98rem; padding:.6rem .9rem; outline:none; transition:border-color .3s,box-shadow .3s; }
+    .ref-input::placeholder { color:var(--muted); font-style:italic; }
+    .ref-input:focus { border-color:rgba(201,168,76,.5); box-shadow:0 0 0 3px rgba(201,168,76,.06); }
+    .show-btn { font-family:'Cormorant Garamond',serif; font-size:.82rem; letter-spacing:.2em; text-transform:uppercase; padding:0 1.3rem; border-radius:8px; border:1px solid var(--gold); background:linear-gradient(135deg,rgba(201,168,76,.15),rgba(201,168,76,.05)); color:var(--gold2); cursor:pointer; transition:all .25s; white-space:nowrap; }
+    .show-btn:hover { background:linear-gradient(135deg,rgba(201,168,76,.28),rgba(201,168,76,.1)); box-shadow:0 0 20px rgba(201,168,76,.25); }
+
+    #verse-preview { margin-top:.85rem; padding:.85rem 1rem; background:rgba(0,0,0,.3); border-radius:8px; border-left:2px solid var(--gold); display:none; animation:fi .4s ease; }
+    @keyframes fi { from{opacity:0;transform:translateY(5px)} to{opacity:1;transform:none} }
+    #verse-ref  { font-family:'Cormorant Garamond',serif; font-size:.7rem; letter-spacing:.3em; text-transform:uppercase; color:var(--gold); margin-bottom:.35rem; }
+    #verse-text { font-style:italic; font-size:.92rem; line-height:1.65; color:var(--ivory2); }
+
+    #error-box { margin-top:.7rem; padding:.5rem .9rem; background:rgba(155,44,44,.12); border:1px solid rgba(155,44,44,.4); border-radius:6px; font-size:.84rem; color:#f09090; display:none; }
+
+    /* ── TV URL ── */
+    .url-card {
+      position:relative; z-index:1; width:100%; max-width:580px; margin-bottom:.9rem;
+      padding:1rem 1.5rem; border-radius:var(--r); border:1px dashed rgba(201,168,76,.2);
+      display:flex; align-items:center; gap:.9rem;
+      opacity:0; animation:rise .55s ease .28s forwards;
+    }
+    .url-icon { font-size:1.1rem; opacity:.45; flex-shrink:0; }
+    .url-label { font-size:.66rem; letter-spacing:.3em; text-transform:uppercase; color:var(--muted); margin-bottom:.2rem; }
+    .url-card a { color:var(--gold); font-family:'Crimson Pro',serif; font-size:.87rem; text-decoration:none; word-break:break-all; }
+    .url-card a:hover { color:var(--gold2); text-decoration:underline; }
+
+    .divider {
+      position:relative; z-index:1; width:100%; max-width:580px;
+      display:flex; align-items:center; gap:.8rem; margin:.2rem 0 .7rem;
+      color:var(--muted); font-size:.62rem; letter-spacing:.3em; text-transform:uppercase;
+    }
+    .divider::before,.divider::after { content:''; flex:1; height:1px; background:linear-gradient(90deg,transparent,rgba(201,168,76,.15),transparent); }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="halo">
+    <div class="line"></div><span class="cross">✝</span><div class="line"></div>
+  </div>
+  <h1>Bible Display</h1>
+  <p>Preacher Control Panel</p>
+</header>
+
+<!-- STATUS -->
+<div class="card">
+  <div class="card-label">Live Status</div>
+  <div class="status-grid">
+    <div class="pulse-ring idle" id="pulse-ring">
+      <div class="ring"></div><div class="dot"></div>
+    </div>
+    <div id="status-text">Ready</div>
+    <div id="raw-text">Waiting for speech…</div>
+  </div>
+  <div id="error-box"></div>
+</div>
+
+<!-- ══ DISPLAY MODE ══
+     Preacher picks what the TV screens show.
+     Tamil only / English only / Both together
+-->
+<div class="card">
+  <div class="card-label">What to Show on TV</div>
+  <div class="mode-grid">
+
+    <button class="mode-btn" id="mode-tamil" onclick="setMode('tamil')">
+      <span class="mode-icon">🇮🇳</span>
+      <span class="mode-name">Tamil Only</span>
+      <span class="mode-sub">பரிசுத்த வேதாகமம்</span>
+    </button>
+
+    <button class="mode-btn active-both" id="mode-both" onclick="setMode('both')">
+      <span class="mode-icon">📖</span>
+      <span class="mode-name">Both</span>
+      <span class="mode-sub">Tamil + English</span>
+    </button>
+
+    <button class="mode-btn" id="mode-english" onclick="setMode('english')">
+      <span class="mode-icon">🇬🇧</span>
+      <span class="mode-name">English Only</span>
+      <span class="mode-sub">Selected version</span>
+    </button>
+
+  </div>
+</div>
+
+<!-- ══ ENGLISH VERSION ══ -->
+<div class="card" id="version-card">
+  <div class="card-label">English Bible Version</div>
+  <div class="version-grid">
+
+    <button class="ver-btn active" id="ver-kjv" onclick="setVersion('kjv')">
+      <span class="ver-name">KJV</span>
+      <span class="ver-sub">King James Version</span>
+    </button>
+
+    <button class="ver-btn" id="ver-niv" onclick="setVersion('niv')">
+      <span class="ver-name">NIV</span>
+      <span class="ver-sub">New International Version</span>
+    </button>
+
+    <button class="ver-btn" id="ver-esv" onclick="setVersion('esv')">
+      <span class="ver-name">ESV</span>
+      <span class="ver-sub">English Standard Version</span>
+    </button>
+
+    <button class="ver-btn" id="ver-nkjv" onclick="setVersion('nkjv')">
+      <span class="ver-name">NKJV</span>
+      <span class="ver-sub">New King James Version</span>
+    </button>
+
+  </div>
+  <div class="version-note" id="version-note">
+    ✓ Using KJV from bible-api.com
+  </div>
+</div>
+
+<!-- SESSION -->
+<div class="card">
+  <div class="card-label">Voice Session — Continuous Listening</div>
+  <div class="mic-section">
+    <div class="mic-wrap">
+      <div class="gr2"></div><div class="gr"></div>
+      <button id="mic-btn" onclick="toggleSession()">
+        <span class="mic-icon">🎙</span>
+        <span class="mic-label" id="mic-label">Start</span>
+      </button>
+    </div>
+    <div class="session-row">
+      <button class="btn btn-stop" id="btn-stop" onclick="stopSession()" disabled>▪ Stop</button>
+      <button class="btn btn-ghost" onclick="clearVerse()">✕ Clear</button>
+    </div>
+  </div>
+</div>
+
+<!-- MANUAL -->
+<div class="card">
+  <div class="card-label">Manual Reference</div>
+  <div class="input-row">
+    <input class="ref-input" id="manual-input" type="text"
+      placeholder="John 3:16  ·  யோவான் 3:16  ·  Psalms 23:1"
+      onkeydown="if(event.key==='Enter') sendManual()"/>
+    <button class="show-btn" onclick="sendManual()">Show</button>
+  </div>
+  <div id="verse-preview">
+    <div id="verse-ref"></div>
+    <div id="verse-text"></div>
+  </div>
+</div>
+
+<!-- TV URL -->
+<div class="divider">Congregation Screens</div>
+<div class="url-card">
+  <span class="url-icon">📺</span>
+  <div>
+    <div class="url-label">Open on TV · Phone · Tablet — same WiFi</div>
+    <div id="display-link">Loading…</div>
+  </div>
+</div>
+
+<script>
+let currentVersion = 0;
+let sessionActive  = false;
+let currentMode    = "both";
+let currentVersion2 = "kjv";
+
+const VERSION_NOTES = {
+  kjv:  "✓ KJV — King James Version (bible-api.com)",
+  niv:  "✓ NIV — World English Bible served (closest free equivalent)",
+  esv:  "✓ ESV — World English Bible served (closest free equivalent)",
+  nkjv: "✓ NKJV — KJV text served (closest free equivalent)",
+};
+
+// TV display URL
+document.getElementById('display-link').innerHTML =
+  `<a href="/display" target="_blank">${location.protocol}//${location.hostname}:${location.port}/display</a>`;
+
+// ── MODE BUTTONS ──
+function setMode(mode) {
+  currentMode = mode;
+  ['tamil','both','english'].forEach(m => {
+    document.getElementById(`mode-${m}`).className =
+      'mode-btn' + (m === mode ? ` active-${m}` : '');
+  });
+  // Hide version card if Tamil only
+  document.getElementById('version-card').style.opacity =
+    mode === 'tamil' ? '0.4' : '1';
+  document.getElementById('version-card').style.pointerEvents =
+    mode === 'tamil' ? 'none' : 'auto';
+  pushSettings();
+}
+
+// ── VERSION BUTTONS ──
+function setVersion(ver) {
+  currentVersion2 = ver;
+  ['kjv','niv','esv','nkjv'].forEach(v => {
+    document.getElementById(`ver-${v}`).className =
+      'ver-btn' + (v === ver ? ' active' : '');
+  });
+  document.getElementById('version-note').textContent = VERSION_NOTES[ver];
+  pushSettings();
+}
+
+async function pushSettings() {
+  const d = await fetch('/api/settings', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ display_mode: currentMode, english_version: currentVersion2 })
+  }).then(r=>r.json());
+  if (d.ok) updateUI(d);
+}
+
+// ── UI UPDATE ──
+function updateUI(s) {
+  currentVersion = s.version;
+  sessionActive  = s.session_active;
+
+  // Pulse
+  document.getElementById('pulse-ring').className =
+    'pulse-ring ' + (s.status || 'idle');
+  document.getElementById('status-text').textContent =
+    s.status==='listening' ? '🎙 Listening…' :
+    s.status==='processing'? '⚙ Processing…' : 'Ready';
+  document.getElementById('raw-text').textContent =
+    s.raw_text || 'Waiting for speech…';
+
+  // Error
+  const err = document.getElementById('error-box');
+  if (s.error) { err.style.display='block'; err.textContent=s.error; }
+  else          { err.style.display='none'; }
+
+  // Verse preview
+  const preview = document.getElementById('verse-preview');
+  if (s.verse && (s.verse.tamil_text || s.verse.english_text)) {
+    preview.style.display = 'block';
+    document.getElementById('verse-ref').textContent  = s.verse.reference || '';
+    // Show whichever text is available
+    const txt = s.verse.tamil_text || s.verse.english_text || '';
+    document.getElementById('verse-text').textContent = txt;
+  } else { preview.style.display='none'; }
+
+  // Mic
+  const mic = document.getElementById('mic-btn');
+  if (s.session_active) {
+    mic.classList.add('active');
+    document.getElementById('mic-label').textContent = 'Active';
+    document.getElementById('btn-stop').disabled = false;
+  } else {
+    mic.classList.remove('active');
+    document.getElementById('mic-label').textContent = 'Start';
+    document.getElementById('btn-stop').disabled = true;
+  }
+
+  // Sync mode/version from server
+  if (s.display_mode && s.display_mode !== currentMode) {
+    currentMode = s.display_mode;
+    setMode(currentMode);
+  }
+  if (s.english_version && s.english_version !== currentVersion2) {
+    currentVersion2 = s.english_version;
+    setVersion(currentVersion2);
+  }
+}
+
+// ── LONG POLL ──
+async function poll() {
+  while (true) {
+    try {
+      const r = await fetch(`/api/poll?version=${currentVersion}`);
+      const d = await r.json();
+      if (d.ok) updateUI(d);
+    } catch(e) {}
+    await new Promise(r=>setTimeout(r,300));
+  }
+}
+
+// ── SESSION ──
+async function toggleSession() {
+  if (sessionActive) await stopSession(); else await startSession();
+}
+async function startSession() {
+  const d = await fetch('/api/start',{method:'POST'}).then(r=>r.json());
+  if (d.ok) updateUI(d);
+}
+async function stopSession() {
+  const d = await fetch('/api/stop',{method:'POST'}).then(r=>r.json());
+  if (d.ok) updateUI(d);
+}
+async function clearVerse() {
+  const d = await fetch('/api/clear',{method:'POST'}).then(r=>r.json());
+  if (d.ok) updateUI(d);
+}
+
+// ── MANUAL ──
+async function sendManual() {
+  const text = document.getElementById('manual-input').value.trim();
+  if (!text) return;
+  const d = await fetch('/api/manual',{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({text})
+  }).then(r=>r.json());
+  if (d.ok) { updateUI(d); document.getElementById('manual-input').value=''; }
+  else {
+    const err = document.getElementById('error-box');
+    err.textContent = d.error || 'Cannot parse reference';
+    err.style.display = 'block';
+  }
+}
+
+// ── INIT ──
+fetch('/api/state').then(r=>r.json()).then(d=>{ if(d.ok) updateUI(d); });
+fetch('/api/settings').then(r=>r.json()).then(d=>{
+  if (d.ok) {
+    currentMode    = d.display_mode    || 'both';
+    currentVersion2 = d.english_version || 'kjv';
+    setMode(currentMode);
+    setVersion(currentVersion2);
+  }
+});
+poll();
+</script>
+</body>
+</html>

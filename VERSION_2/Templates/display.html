@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Bible Display V2</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            min-height: 100vh;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Georgia', serif;
+            overflow: hidden;
+        }
+
+        .bg {
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(ellipse at center,
+                #1a1a2e 0%, #000 70%);
+            z-index: 0;
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            padding: 60px 40px;
+            max-width: 900px;
+            animation: fadeIn 1s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .reference {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #a78bfa;
+            margin-bottom: 24px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .verse-text {
+            font-size: 2.4rem;
+            color: #f0f0f0;
+            line-height: 1.7;
+            font-style: italic;
+        }
+
+        .cross {
+            font-size: 3rem;
+            color: rgba(167, 139, 250, 0.2);
+            margin-bottom: 32px;
+        }
+
+        .waiting {
+            color: rgba(255,255,255,0.2);
+            font-size: 1.2rem;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="bg"></div>
+    <div class="container" id="content">
+        <div class="cross">✝</div>
+        <div class="waiting">Waiting for verse...</div>
+    </div>
+
+    <script>
+        let lastRef = "";
+
+        function fetchVerse() {
+            fetch('/verse')
+                .then(r => r.json())
+                .then(data => {
+                    if (data.reference && data.reference !== lastRef) {
+                        lastRef = data.reference;
+                        showVerse(data);
+                    }
+                });
+        }
+
+        function showVerse(data) {
+            const content = document.getElementById('content');
+            content.style.animation = 'none';
+            content.offsetHeight; // reflow trick for re-animation
+            content.style.animation = 'fadeIn 1s ease';
+
+            content.innerHTML = `
+                <div class="cross">✝</div>
+                <div class="reference">${data.reference}</div>
+                <div class="verse-text">"${data.text}"</div>
+            `;
+        }
+
+        // Poll every 2 seconds
+        setInterval(fetchVerse, 2000);
+    </script>
+</body>
+</html>

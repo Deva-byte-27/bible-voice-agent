@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Bible Display</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=EB+Garamond:ital,wght@0,400;0,500;1,400;1,500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+  :root { --accent:#c8a96e; --pad:clamp(1rem,4vw,5rem); }
+
+  html,body { width:100%; height:100%; overflow:hidden; background:#000; }
+
+  #bg {
+    position:fixed; inset:0; background-size:cover; background-position:center;
+    opacity:0; transition:opacity 1.5s ease; z-index:0;
+  }
+  #bg-overlay {
+    position:fixed; inset:0; z-index:1;
+    background:rgba(0,0,0,0.82); transition:background 1.5s ease;
+  }
+  .particles { position:fixed; inset:0; z-index:5; pointer-events:none; overflow:hidden; }
+  .particle  { position:absolute; font-size:.9rem; opacity:0; animation:fu linear infinite; color:var(--accent); }
+  @keyframes fu {
+    0%{opacity:0;transform:translateY(0) rotate(0deg)}
+    10%{opacity:.4} 90%{opacity:.2}
+    100%{opacity:0;transform:translateY(-100vh) rotate(360deg)}
+  }
+
+  #content {
+    position:relative; z-index:10; width:100%; height:100%;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center;
+    padding:
+      max(var(--pad), env(safe-area-inset-top))
+      max(var(--pad), env(safe-area-inset-right))
+      max(var(--pad), env(safe-area-inset-bottom))
+      max(var(--pad), env(safe-area-inset-left));
+    overflow:hidden;
+  }
+
+  /* ── IDLE ── */
+  #idle-state { display:flex; flex-direction:column; align-items:center; gap:1.4rem; }
+  .idle-cross { font-size:clamp(2.5rem,8vmin,5rem); opacity:.22; color:#fff; animation:breathe 4s ease-in-out infinite; }
+  .idle-text  { font-family:'Cinzel',serif; font-size:clamp(.6rem,1.4vmin,.85rem); letter-spacing:.3em; color:rgba(255,255,255,.2); text-transform:uppercase; }
+  @keyframes breathe { 0%,100%{opacity:.18;transform:scale(1)} 50%{opacity:.32;transform:scale(1.05)} }
+
+  /* ── VERSE WRAPPER ── */
+  #verse-state {
+    display:none; flex-direction:column; align-items:center;
+    gap:clamp(.4rem,1.8vmin,1.8rem);
+    max-width:min(95vw,1100px); width:100%;
+    opacity:0; transform:translateY(20px);
+    transition:opacity .9s ease, transform .9s ease;
+  }
+  #verse-state.visible { opacity:1; transform:translateY(0); }
+
+  .genre-label { font-family:'Cinzel',serif; font-size:clamp(.5rem,1.1vmin,.75rem); letter-spacing:.35em; color:var(--accent); text-transform:uppercase; opacity:.8; }
+
+  .deco-line {
+    display:flex; align-items:center; gap:clamp(.4rem,1.5vw,1rem);
+    color:var(--accent); font-size:clamp(.75rem,1.4vmin,1.1rem); opacity:.6; width:100%; justify-content:center;
+  }
+  .deco-line::before { content:''; display:block; height:1px; width:clamp(28px,5vw,90px); background:linear-gradient(to right,transparent,var(--accent)); }
+  .deco-line::after  { content:''; display:block; height:1px; width:clamp(28px,5vw,90px); background:linear-gradient(to left, transparent,var(--accent)); }
+
+  /* ── TAMIL VERSE ── */
+  #tamil-block { width:100%; max-width:950px; }
+  .tamil-label {
+    font-family:'Cinzel',serif; font-size:clamp(.48rem,.9vmin,.65rem);
+    letter-spacing:.3em; color:rgba(200,169,110,.6); text-transform:uppercase;
+    margin-bottom:.3rem;
+  }
+  .tamil-text {
+    font-family:'EB Garamond',serif;
+    font-size:clamp(1.1rem,3.5vmin,2.8rem);
+    line-height:1.65; color:#fff;
+    text-shadow:0 2px 20px rgba(0,0,0,.9);
+    overflow-wrap:break-word;
+  }
+  .tamil-ref {
+    font-family:'Cinzel',serif; font-size:clamp(.7rem,1.4vmin,1.1rem);
+    letter-spacing:.2em; color:var(--accent); margin-top:.3rem; opacity:.9;
+  }
+
+  /* ── SEPARATOR (shown only in both mode) ── */
+  .lang-separator {
+    width:100%; max-width:600px; height:1px;
+    background:linear-gradient(90deg,transparent,rgba(201,168,76,.3),transparent);
+    display:none;
+  }
+
+  /* ── ENGLISH VERSE ── */
+  #english-block { width:100%; max-width:950px; }
+  .english-label {
+    font-family:'Cinzel',serif; font-size:clamp(.48rem,.9vmin,.65rem);
+    letter-spacing:.3em; color:rgba(91,200,255,.6); text-transform:uppercase;
+    margin-bottom:.3rem;
+  }
+  .english-text {
+    font-family:'EB Garamond',serif; font-style:italic;
+    font-size:clamp(.95rem,2.8vmin,2.1rem);
+    line-height:1.7; color:rgba(255,255,255,.85);
+    text-shadow:0 2px 16px rgba(0,0,0,.8);
+    overflow-wrap:break-word;
+  }
+  .english-ref {
+    font-family:'Cinzel',serif; font-size:clamp(.65rem,1.2vmin,.95rem);
+    letter-spacing:.2em; color:rgba(91,200,255,.8); margin-top:.3rem;
+  }
+  .version-badge {
+    font-family:'Cinzel',serif; font-size:clamp(.42rem,.75vmin,.58rem);
+    letter-spacing:.25em; color:rgba(255,255,255,.3); text-transform:uppercase;
+    margin-top:.15rem;
+  }
+
+  /* Connection dot */
+  #conn-dot {
+    position:fixed; bottom:max(.8rem,env(safe-area-inset-bottom));
+    right:max(.8rem,env(safe-area-inset-right));
+    width:8px; height:8px; border-radius:50%;
+    background:#e05050; box-shadow:0 0 8px #e05050; z-index:100; transition:all .3s;
+  }
+  #conn-dot.ok { background:#4caf50; box-shadow:0 0 8px #4caf50; }
+
+  /* ── LANDSCAPE PHONE ── */
+  @media (orientation:landscape) and (max-height:500px) {
+    :root { --pad:clamp(.5rem,2vw,1.2rem); }
+    .tamil-text   { font-size:clamp(.85rem,3vmin,1.7rem); line-height:1.4; }
+    .english-text { font-size:clamp(.72rem,2.4vmin,1.3rem); line-height:1.5; }
+    #verse-state  { gap:clamp(.2rem,1vmin,.6rem); }
+    .genre-label,.deco-line { display:none; }
+    .tamil-label,.english-label { display:none; }
+  }
+
+  /* ── TV / LARGE SCREEN ── */
+  @media (min-width:1280px) and (orientation:landscape) {
+    .tamil-text   { font-size:clamp(1.8rem,3.2vw,3.4rem); line-height:1.65; }
+    .english-text { font-size:clamp(1.3rem,2.4vw,2.4rem); }
+    .tamil-ref,.english-ref { font-size:clamp(.9rem,1.5vw,1.5rem); }
+    #verse-state  { gap:clamp(.9rem,2vmin,2.2rem); }
+  }
+</style>
+</head>
+<body>
+
+<div id="bg"></div>
+<div id="bg-overlay"></div>
+<div class="particles" id="particles"></div>
+
+<div id="content">
+  <div id="idle-state">
+    <div class="idle-cross">✝</div>
+    <div class="idle-text">Waiting for verse…</div>
+  </div>
+
+  <div id="verse-state">
+    <div class="genre-label" id="genreLabel"></div>
+    <div class="deco-line"   id="decoChar">✦</div>
+
+    <!-- TAMIL BLOCK -->
+    <div id="tamil-block">
+      <div class="tamil-label">பரிசுத்த வேதாகமம் — Tamil OV</div>
+      <div class="tamil-text" id="tamilText"></div>
+      <div class="tamil-ref"  id="tamilRef"></div>
+    </div>
+
+    <!-- SEPARATOR — visible only in "both" mode -->
+    <div class="lang-separator" id="langSep"></div>
+
+    <!-- ENGLISH BLOCK -->
+    <div id="english-block">
+      <div class="english-label" id="englishLabel">Holy Bible — KJV</div>
+      <div class="english-text"  id="englishText"></div>
+      <div class="english-ref"   id="englishRef"></div>
+      <div class="version-badge" id="versionBadge"></div>
+    </div>
+  </div>
+</div>
+
+<div id="conn-dot"></div>
+
+<script>
+let currentVersion = 0;
+let currentRef     = null;
+
+async function poll() {
+  while (true) {
+    try {
+      const res  = await fetch(`/api/poll?version=${currentVersion}`,
+        {signal:AbortSignal.timeout(25000)});
+      if (!res.ok) throw new Error("err");
+      const data = await res.json();
+      document.getElementById('conn-dot').classList.add('ok');
+      applyState(data);
+    } catch(e) {
+      document.getElementById('conn-dot').classList.remove('ok');
+      await sleep(3000);
+    }
+  }
+}
+
+function applyState(data) {
+  currentVersion = data.version || 0;
+  if (!data.verse) {
+    if (currentRef !== null) { showIdle(); currentRef = null; }
+    return;
+  }
+  const v = data.verse;
+  if (v.reference === currentRef) return;
+  currentRef = v.reference;
+  applyTheme(v.theme);
+  showVerse(v);
+  spawnParticles(v.theme);
+}
+
+function applyTheme(theme) {
+  if (!theme) return;
+  const bg = document.getElementById('bg');
+  if (theme.bg_image) { bg.style.backgroundImage=`url('${theme.bg_image}')`;bg.style.opacity='1'; }
+  document.getElementById('bg-overlay').style.background = theme.overlay||'rgba(0,0,0,0.82)';
+  document.documentElement.style.setProperty('--accent', theme.accent||'#c8a96e');
+}
+
+function showVerse(v) {
+  const theme       = v.theme || {};
+  const mode        = v.display_mode || 'both';
+  const tamilText   = v.tamil_text   || '';
+  const englishText = v.english_text || '';
+  const tamilRef    = v.tamil_ref    || v.reference || '';
+  const englishRef  = v.english_ref  || v.reference || '';
+
+  document.getElementById('genreLabel').textContent = (theme.label||'').toUpperCase();
+  document.getElementById('decoChar').textContent   = theme.particle || '✦';
+
+  const tBlock  = document.getElementById('tamil-block');
+  const eBlock  = document.getElementById('english-block');
+  const sep     = document.getElementById('langSep');
+
+  // ── Tamil block ──
+  if (mode === 'tamil' || mode === 'both') {
+    document.getElementById('tamilText').textContent = tamilText;
+    document.getElementById('tamilRef').textContent  = tamilRef;
+    tBlock.style.display = 'block';
+  } else {
+    tBlock.style.display = 'none';
+  }
+
+  // ── Separator ──
+  sep.style.display = (mode === 'both' && tamilText && englishText) ? 'block' : 'none';
+
+  // ── English block ──
+  if (mode === 'english' || mode === 'both') {
+    document.getElementById('englishText').textContent  = englishText;
+    document.getElementById('englishRef').textContent   = englishRef;
+    document.getElementById('versionBadge').textContent = v.english_version || '';
+    document.getElementById('englishLabel').textContent =
+      `Holy Bible — ${(v.english_version||'').split(' ')[0] || 'English'}`;
+    eBlock.style.display = 'block';
+  } else {
+    eBlock.style.display = 'none';
+  }
+
+  // Show verse state
+  document.getElementById('idle-state').style.display = 'none';
+  const vs = document.getElementById('verse-state');
+  vs.style.display = 'flex';
+  vs.offsetHeight;
+  vs.classList.add('visible');
+}
+
+function showIdle() {
+  const vs = document.getElementById('verse-state');
+  vs.classList.remove('visible');
+  setTimeout(() => {
+    vs.style.display = 'none';
+    document.getElementById('idle-state').style.display = 'flex';
+    document.getElementById('bg').style.opacity = '0';
+  }, 900);
+  stopParticles();
+}
+
+let pTimer = null;
+function spawnParticles(theme) {
+  stopParticles();
+  const char=theme?.particle||'✦', color=theme?.accent||'#c8a96e';
+  const c=document.getElementById('particles');
+  let n=0;
+  pTimer=setInterval(()=>{
+    if(n++>16){clearInterval(pTimer);return;}
+    const p=document.createElement('div'); p.className='particle';
+    p.textContent=char;
+    p.style.cssText=`left:${Math.random()*100}vw;bottom:-2rem;color:${color};`
+      +`animation-duration:${8+Math.random()*6}s;animation-delay:${Math.random()*2}s;`
+      +`font-size:${.6+Math.random()*.8}rem;`;
+    c.appendChild(p); setTimeout(()=>p.remove(),16000);
+  },450);
+}
+function stopParticles() {
+  if(pTimer){clearInterval(pTimer);pTimer=null;}
+  document.getElementById('particles').innerHTML='';
+}
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+
+poll();
+</script>
+</body>
+</html>
