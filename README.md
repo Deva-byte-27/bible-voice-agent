@@ -1,4 +1,5 @@
-# 📖 Bible Voice Recognition Agent
+# 📖 Bible Voice Recognition ML Model
+
 
 A real-time voice-powered Bible verse retrieval system. Speak a Bible reference out loud — the app listens, transcribes it, parses the reference, and instantly displays the verse.
 
